@@ -1,52 +1,46 @@
 # zsh-history-beginning-search.plugin.zsh
 # ZSH History Beginning Search Plugin
-# Enables prefix-based history search using arrow keys
+# Enables prefix-based history search using arrow keys with cursor auto-positioning
 
-# Variable to store the search prefix position
-typeset -g _HISTORY_SEARCH_PREFIX_POS
+# Global variable to store the initial search prefix cursor position
+typeset -g __HISTORY_SEARCH_INITIAL_CURSOR_POS
 
-# Custom widget: history search backward + move cursor to end of line
-function history-beginning-search-backward-end() {
-    # If this is the first search or we changed the input, save prefix position
+# Helper function: manage cursor position and perform history search
+# Args: $1 - direction (backward|forward)
+_history_search_with_cursor_to_end() {
+    local direction=$1
+
+    # Save initial cursor position on first search, restore it on continuous search
     if [[ $LASTWIDGET != history-beginning-search-*-end ]]; then
-        _HISTORY_SEARCH_PREFIX_POS=$CURSOR
+        __HISTORY_SEARCH_INITIAL_CURSOR_POS=$CURSOR
     else
-        # Restore cursor to prefix position for continuous search
-        CURSOR=$_HISTORY_SEARCH_PREFIX_POS
+        CURSOR=${__HISTORY_SEARCH_INITIAL_CURSOR_POS:-0}
     fi
 
-    # Perform history search
-    zle history-beginning-search-backward
+    # Perform history search in specified direction
+    zle history-beginning-search-$direction
 
-    # Move cursor to end of line after search
+    # Move cursor to end of line
     zle end-of-line
 }
 
-# Custom widget: history search forward + move cursor to end of line
-function history-beginning-search-forward-end() {
-    # If this is the first search or we changed the input, save prefix position
-    if [[ $LASTWIDGET != history-beginning-search-*-end ]]; then
-        _HISTORY_SEARCH_PREFIX_POS=$CURSOR
-    else
-        # Restore cursor to prefix position for continuous search
-        CURSOR=$_HISTORY_SEARCH_PREFIX_POS
-    fi
-
-    # Perform history search
-    zle history-beginning-search-forward
-
-    # Move cursor to end of line after search
-    zle end-of-line
+# Backward search widget
+history-beginning-search-backward-end() {
+    _history_search_with_cursor_to_end backward
 }
 
-# Register custom widgets to ZLE
+# Forward search widget
+history-beginning-search-forward-end() {
+    _history_search_with_cursor_to_end forward
+}
+
+# Register widgets
 zle -N history-beginning-search-backward-end
 zle -N history-beginning-search-forward-end
 
-# Bind arrow keys to custom widgets with cursor-to-end behavior
-bindkey "^[[A" history-beginning-search-backward-end
-bindkey "^[[B" history-beginning-search-forward-end
-
-# Alternative key codes for different terminal emulators
-bindkey "\e[A" history-beginning-search-backward-end
-bindkey "\e[B" history-beginning-search-forward-end
+# Key bindings for up/down arrows
+# Format: ^[[A (CSI sequence) and \e[A (ESC sequence) for terminal compatibility
+bindkey '^[[A' history-beginning-search-backward-end  # Up arrow (CSI)
+bindkey '^[[B' history-beginning-search-forward-end   # Down arrow (CSI)
+bindkey '\e[A' history-beginning-search-backward-end  # Up arrow (ESC)
+bindkey '\e[B' history-beginning-search-forward-end   # Down arrow (ESC)
